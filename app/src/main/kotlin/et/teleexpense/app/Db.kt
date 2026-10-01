@@ -23,7 +23,7 @@ data class TxRow(
     val userEdited: Boolean = false, val deleted: Boolean = false,
 )
 
-@Dao interface Dao {
+@Dao interface TxDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE) suspend fun insertCandidate(c: CandidateRow): Long
     @Query("SELECT * FROM candidates") suspend fun allCandidates(): List<CandidateRow>
     @Query("SELECT * FROM transactions WHERE deleted = 0 ORDER BY dateTimeIso DESC")
@@ -32,17 +32,4 @@ data class TxRow(
     @Upsert suspend fun upsert(t: TxRow)
     @Query("DELETE FROM transactions WHERE key = :k AND userEdited = 0") suspend fun dropAuto(k: String)
     @Query("UPDATE transactions SET deleted = 1, userEdited = 1 WHERE key = :k") suspend fun softDelete(k: String)
-    @Query("UPDATE transactions SET category=:cat, amount=:amt, dateTimeIso=:dt, ethYear=:y, ethMonth=:m, ethDay=:d, userEdited=1 WHERE key=:k")
-    suspend fun edit(k: String, cat: String, amt: Double, dt: String, y: Int, m: Int, d: Int)
-}
-
-@Database(entities = [CandidateRow::class, TxRow::class], version = 1, exportSchema = false)
-abstract class AppDb : RoomDatabase() {
-    abstract fun dao(): Dao
-    companion object {
-        @Volatile private var i: AppDb? = null
-        fun get(c: Context) = i ?: synchronized(this) {
-            i ?: Room.databaseBuilder(c.applicationContext, AppDb::class.java, "tele.db").build().also { i = it }
-        }
-    }
-}
+    @Query("UPDATE
