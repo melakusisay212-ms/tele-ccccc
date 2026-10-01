@@ -14,7 +14,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import et.teleexpense.*
-import androidx.compose.foundation.BorderStroke
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -238,7 +237,7 @@ import java.util.Locale
 // ---------- details + edit ----------
 private val CATS = listOf("data_package", "airtime", "airtime_recharge", "sms_package", "voice_package", "mixed_package", "other")
 
-@Composable fun DetailDialog(t: TxRow, dao: Dao, onClose: () -> Unit) {
+@Composable fun DetailDialog(t: TxRow, dao: TxDao, onClose: () -> Unit) {
     val scope = rememberCoroutineScope()
     var editing by remember { mutableStateOf(false) }
     var cat by remember { mutableStateOf(t.category) }
