@@ -1,0 +1,71 @@
+name: Build debug APK
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check project structure
+        run: |
+          for f in settings.gradle.kts build.gradle.kts gradle.properties parser/build.gradle.kts app/build.gradle.kts app/src/main/AndroidManifest.xml; do
+            [ -f "$f" ] || { echo "::error::Missing $f (wrong folder?)"; exit 1; }
+          done
+          if grep -q 'android {' build.gradle.kts; then
+            echo "::error::App build code found in ROOT build.gradle.kts. It must only declare plugins with 'apply false'."; exit 1; fi
+          grep -q 'include(":parser", ":app")' settings.gradle.kts || { echo "::error::settings.gradle.kts must include :parser and :app"; exit 1; }
+          grep -q 'pluginManagement' settings.gradle.kts || { echo "::error::settings.gradle.kts needs pluginManagement with google()"; exit 1; }
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: android-actions/setup-android@v3
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.9
+
+      - name: Parser tests
+        run: gradle :parser:test --stacktrace
+
+      - name: Build debug APK
+        run: gradle :app:assembleDebug --stacktrace
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: parser-test-report
+          path: parser/build/reports/tests/test
+          if-no-files-found: ignore
+
+      - name: Upload build reports on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-reports
+          path: "**/build/reports"
+          if-no-files-found: ignore
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: tele-expense-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
